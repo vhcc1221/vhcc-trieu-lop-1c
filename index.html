@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Quỹ Lớp 1C</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { --primary: #007bff; --danger: #dc3545; --success: #28a745; --warning: #ffc107; --light: #f8f9fa; --purple: #6f42c1; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f0f2f5; font-size: 16px; }
+        .container { max-width: 600px; margin: 0 auto; padding: 15px; background: white; min-height: 100vh; box-sizing: border-box; }
+        .nav { display: flex; justify-content: space-between; background: #fff; padding: 10px 0; border-bottom: 2px solid #eee; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
+        .nav button { border: none; background: none; padding: 10px 8px; font-weight: bold; color: #666; font-size: 13px; cursor: pointer; white-space: nowrap; }
+        .nav button.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+        .section { display: none; padding-top: 15px; }
+        .section.active { display: block; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
+        button.btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 5px; font-weight: bold; }
+        .summary-box { background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-around; text-align: center; }
+        .list-item { background: #fff; border: 1px solid #eee; padding: 12px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .list-item.highlight { border: 2px solid var(--danger); background-color: #fff5f5; }
+        .info b { color: #333; font-size: 15px; }
+        .info small { color: #666; display: block; }
+        .actions button { padding: 6px 10px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; }
+
+        /* Style cho danh sách gợi ý tùy chỉnh */
+        .suggestion-wrapper { position: relative; }
+        .custom-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none; margin-top: -10px; }
+        .suggestion-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .suggestion-item:hover { background: #f0f7ff; }
+        .duplicate-alert { color: var(--danger); font-size: 13px; font-weight: bold; margin-bottom: 10px; display: none; }
+
+        #previewArea { border: 1px solid #ccc; padding: 15px; margin-top: 10px; background: #fff; overflow-x: auto; }
+        .print-table-preview { width: 100%; border-collapse: collapse; font-family: "Times New Roman", serif; font-size: 12pt; background: #fff; }
+        .print-table-preview th, .print-table-preview td { border: 1px solid #000; padding: 5px; color: #000; }
+        .header-preview { text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 10px; text-transform: uppercase; font-family: "Times New Roman", serif; color: #000; }
+        .expense-box { border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fff5f5; margin-bottom: 15px; }
+        .balance-box { background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px; }
+        .balance-box b { font-size: 20px; color: #155724; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="nav">
+        <button onclick="switchTab('tab-students')" id="btn-students" class="active">Học Sinh</button>
+        <button onclick="switchTab('tab-campaigns')" id="btn-campaigns">Đợt Ủng Hộ</button>
+        <button onclick="switchTab('tab-donate')" id="btn-donate">Nhập Tiền</button>
+        <button onclick="switchTab('tab-expenses')" id="btn-expenses">Chi Tiêu</button>
+        <button onclick="switchTab('tab-print')" id="btn-print">Bản In</button>
+        <button onclick="switchTab('tab-settings')" id="btn-settings">Cài Đặt</button>
+    </div>
+
+    <div id="tab-students" class="section active">
+        <input type="search" id="searchStd" placeholder="🔍 Tìm kiếm tên học sinh..." oninput="renderStudents()">
+        <div style="border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fafafa;">
+            <input type="text" id="stdName" placeholder="Họ tên học sinh (Bắt buộc)">
+            <input type="text" id="stdFather" placeholder="Họ tên Bố">
+            <input type="text" id="stdMother" placeholder="Họ tên Mẹ">
+            <button class="btn" onclick="addStudent()">Thêm vào danh sách lớp</button>
+        </div>
+        <p><b>Sĩ số: <span id="countStd">0</span></b></p>
+        <div id="studentListDisplay"></div>
+    </div>
+
+    <div id="tab-campaigns" class="section">
+        <input type="text" id="campName" placeholder="Tên đợt (VD: ủng hộ trung thu)">
+        <button class="btn" style="background:var(--success)" onclick="addCampaign()">Tạo danh sách mới</button>
+        <hr>
+        <div id="campaignListDisplay"></div>
+    </div>
+
+    <div id="tab-donate" class="section">
+        <label>Chọn đợt ủng hộ:</label>
+        <select id="donateCampaignSelect" onchange="renderRecentDonations()"></select>
+        <div style="border: 1px solid #eee; padding: 10px; border-radius: 8px; background: #fff;">
+            <div id="dupAlert" class="duplicate-alert">⚠️ Tên này đã có trong danh sách ủng hộ!</div>
+            <div class="suggestion-wrapper">
+                <input type="text" id="donateName" placeholder="Nhập tên học sinh..." oninput="handleDonateNameInput()" onfocus="handleDonateNameInput()">
+                <div id="customSuggestions" class="custom-suggestions"></div>
+            </div>
+            <input type="tel" id="donateAmount" placeholder="Số tiền (VD: 100.000)" onkeyup="formatCurrencyInput(this)">
+            <button class="btn" onclick="addDonation()">Ghi nhận ủng hộ</button>
+        </div>
+        <div class="summary-box">
+            <div><small>Người đóng</small><br><b id="sumCount">0</b></div>
+            <div><small>Tổng tiền</small><br><b id="sumMoney" style="color:var(--success)">0 đ</b></div>
+        </div>
+        <div id="recentDonations"></div>
+    </div>
+
+    <div id="tab-expenses" class="section">
+        <label>Chọn đợt để quản lý chi tiêu:</label>
+        <select id="expenseCampaignSelect" onchange="renderExpenses()"></select>
+        <div class="balance-box">
+            <small>SỐ DƯ CỦA ĐỢT NÀY</small><br>
+            <b id="finalBalance">0 đ</b>
+        </div>
+        <div class="expense-box">
+            <input type="date" id="expDate">
+            <input type="text" id="expTitle" placeholder="Khoản chi (Bắt buộc)">
+            <input type="tel" id="expAmount" placeholder="Số tiền chi (Bắt buộc)" onkeyup="formatCurrencyInput(this)">
+            <button class="btn" style="background:var(--purple)" onclick="addExpense()">Lưu khoản chi</button>
+        </div>
+        <div class="summary-box" style="background: #fff0f0;">
+            <div><small>Tổng chi đợt này</small><br><b id="sumExpense" style="color:var(--danger)">0 đ</b></div>
+        </div>
+        <div id="expenseListDisplay"></div>
+    </div>
+
+    <div id="tab-print" class="section">
+        <label>Chọn danh sách:</label>
+        <select id="printCampaignSelect" onchange="renderPrintPreview()"></select>
+        <label>Loại danh sách:</label>
+        <select id="printTypeSelect" onchange="renderPrintPreview()">
+            <option value="donate">Danh sách Thu (Ủng hộ)</option>
+            <option value="expense">Danh sách Chi tiêu</option>
+        </select>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button class="btn" onclick="printData()" style="background:#333">🖨️ IN / XUẤT PDF</button>
+            <button class="btn" onclick="downloadImage()" style="background:var(--success)">📸 XUẤT ẢNH (.JPG)</button>
+        </div>
+        <div id="previewArea">
+            <div id="printContent" style="background: white; padding: 10px;"></div>
+        </div>
+    </div>
+
+    <div id="tab-settings" class="section">
+        <button class="btn" style="background:var(--warning); color:#333" onclick="backupData()">⬇️ Sao lưu dữ liệu (.txt)</button>
+        <hr>
+        <label>Nạp dữ liệu từ file .txt hoặc .json:</label>
+        <input type="file" id="fileInput" accept=".txt,.json">
+        <button class="btn" style="background:var(--danger)" onclick="restoreData()">⬆️ Khôi phục (Restore)</button>
+    </div>
+</div>
+
+<script>
+    let students = JSON.parse(localStorage.getItem('students')) || [];
+    let campaigns = JSON.parse(localStorage.getItem('campaigns')) || [];
+    let donations = JSON.parse(localStorage.getItem('donations')) || [];
+    let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+
+    function toTitleCase(str) {
+        if (!str) return "";
+        return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+    function formatMoney(n) { return new Intl.NumberFormat('vi-VN').format(n); }
+    function getRawMoney(str) { return parseInt(String(str).replace(/\D/g, '')) || 0; }
+    function formatCurrencyInput(input) {
+        let v = input.value.replace(/\D/g, "");
+        input.value = v ? parseInt(v).toLocaleString("vi-VN") : "";
+    }
+
+    function switchTab(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        document.getElementById('btn-' + id.split('-')[1]).classList.add('active');
+        if(id === 'tab-students') renderStudents();
+        if(id === 'tab-campaigns') renderCampaigns();
+        if(id === 'tab-donate') prepareDonateTab();
+        if(id === 'tab-expenses') prepareExpenseTab();
+        if(id === 'tab-print') preparePrintTab();
+    }
+
+    // --- QUẢN LÝ HỌC SINH ---
+    function addStudent() {
+        let name = toTitleCase(document.getElementById('stdName').value.trim());
+        let f = toTitleCase(document.getElementById('stdFather').value.trim());
+        let m = toTitleCase(document.getElementById('stdMother').value.trim());
+        if(!name) return alert("Tên HS không được để trống");
+        students.push({ id: Date.now(), name, father: f, mother: m });
+        students.sort((a,b) => a.name.localeCompare(b.name));
+        localStorage.setItem('students', JSON.stringify(students));
+        document.querySelectorAll('#tab-students input').forEach(i => i.value = '');
+        renderStudents();
+    }
+    function renderStudents() {
+        let search = document.getElementById('searchStd').value.toLowerCase();
+        let list = students.filter(s => s.name.toLowerCase().includes(search));
+        let html = list.map(s => `
+            <div class="list-item">
+                <div class="info"><b>${s.name}</b><small>Bố: ${s.father||'--'} | Mẹ: ${s.mother||'--'}</small></div>
+                <div class="actions"><button style="background:var(--danger);color:white" onclick="deleteStudent(${s.id})">Xóa</button></div>
+            </div>`).join('');
+        document.getElementById('studentListDisplay').innerHTML = html;
+        document.getElementById('countStd').innerText = students.length;
+    }
+    function deleteStudent(id) {
+        if(confirm("Xóa học sinh này?")) {
+            students = students.filter(s => s.id !== id);
+            localStorage.setItem('students', JSON.stringify(students));
+            renderStudents();
+        }
+    }
+
+    // --- ĐỢT ỦNG HỘ ---
+    function addCampaign() {
+        let name = document.getElementById('campName').value.trim().toUpperCase();
+        if(!name) return alert("Nhập tên danh sách");
+        campaigns.push({ id: Date.now(), name });
+        localStorage.setItem('campaigns', JSON.stringify(campaigns));
+        document.getElementById('campName').value = '';
+        renderCampaigns();
+    }
+    function renderCampaigns() {
+        document.getElementById('campaignListDisplay').innerHTML = campaigns.map(c => `
+            <div class="list-item">
+                <b>${c.name}</b>
+                <button style="background:var(--danger);color:white" onclick="deleteCampaign(${c.id})">Xóa</button>
+            </div>`).join('');
+    }
+    function deleteCampaign(id) {
+        if(confirm("Xóa đợt này? Tất cả dữ liệu thu và chi liên quan sẽ bị xóa.")) {
+            campaigns = campaigns.filter(c => c.id !== id);
+            donations = donations.filter(d => d.campaignId != id);
+            expenses = expenses.filter(e => e.campaignId != id);
+            localStorage.setItem('campaigns', JSON.stringify(campaigns));
+            localStorage.setItem('donations', JSON.stringify(donations));
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            renderCampaigns();
+        }
+    }
+
+    // --- NHẬP TIỀN (Phần chỉnh sửa) ---
+    function prepareDonateTab() {
+        let sel = document.getElementById('donateCampaignSelect');
+        sel.innerHTML = campaigns.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        if(campaigns.length) sel.value = campaigns[campaigns.length-1].id;
+        renderRecentDonations();
+    }
+
+    function handleDonateNameInput() {
+        let val = document.getElementById('donateName').value.toLowerCase();
+        let suggestions = document.getElementById('customSuggestions');
+        
+        if (val.length < 1) {
+            suggestions.style.display = 'none';
+            checkAndHighlightDuplicate();
+            return;
+        }
+
+        let matches = students.filter(s => s.name.toLowerCase().includes(val));
+        if (matches.length > 0) {
+            suggestions.innerHTML = matches.map(s => `
+                <div class="suggestion-item" onclick="selectSuggestion('${s.name}')">
+                    ${s.name} <small style="color:#888">(Bố: ${s.father||'?'})</small>
+                </div>
+            `).join('');
+            suggestions.style.display = 'block';
+        } else {
+            suggestions.style.display = 'none';
+        }
+        checkAndHighlightDuplicate();
+    }
+
+    function selectSuggestion(name) {
+        document.getElementById('donateName').value = name;
+        document.getElementById('customSuggestions').style.display = 'none';
+        checkAndHighlightDuplicate();
+    }
+
+    // Đóng gợi ý khi bấm ra ngoài
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.suggestion-wrapper')) {
+            document.getElementById('customSuggestions').style.display = 'none';
+        }
+    });
+
+    function checkAndHighlightDuplicate() {
+        let name = toTitleCase(document.getElementById('donateName').value.trim());
+        let campId = document.getElementById('donateCampaignSelect').value;
+        let found = donations.find(d => d.campaignId == campId && d.studentName === name);
+        
+        document.getElementById('dupAlert').style.display = found ? 'block' : 'none';
+        renderRecentDonations(found ? found.id : null);
+    }
+
+    function addDonation() {
+        let campId = document.getElementById('donateCampaignSelect').value;
+        let name = toTitleCase(document.getElementById('donateName').value.trim());
+        let amt = getRawMoney(document.getElementById('donateAmount').value);
+        if(!campId) return alert("Vui lòng tạo một đợt ủng hộ trước.");
+        if(!name || amt <= 0) return alert("Nhập đủ tên và số tiền");
+        
+        let idx = donations.findIndex(d => d.campaignId == campId && d.studentName === name);
+        if(idx >= 0) {
+            if(!confirm("Học sinh này đã ủng hộ rồi. Bạn có muốn cập nhật lại số tiền mới không?")) return;
+            donations[idx].amount = amt;
+        } else {
+            donations.push({ id: Date.now(), campaignId: campId, studentName: name, amount: amt });
+        }
+        localStorage.setItem('donations', JSON.stringify(donations));
+        document.getElementById('donateName').value = '';
+        document.getElementById('donateAmount').value = '';
+        document.getElementById('dupAlert').style.display = 'none';
+        renderRecentDonations();
+    }
+
+    function renderRecentDonations(highId = null) {
+        let campId = document.getElementById('donateCampaignSelect').value;
+        if(!campId) return;
+        
+        let list = donations.filter(d => d.campaignId == campId).reverse();
+        
+        // Đẩy tên trùng lên trên cùng
+        if(highId) {
+            let i = list.findIndex(d => d.id === highId);
+            if(i > -1) { 
+                let item = list.splice(i, 1)[0]; 
+                list.unshift(item); 
+            }
+        }
+        
+        let totalMoney = 0;
+        let html = list.map(d => {
+            totalMoney += d.amount;
+            let origin = students.find(s => s.name === d.studentName);
+            let pInfo = origin ? `(Bố: ${origin.father||'?'}, Mẹ: ${origin.mother||'?'})` : "(Ngoài danh sách)";
+            return `<div class="list-item ${d.id === highId ? 'highlight' : ''}">
+                <div class="info">
+                    <b>${d.studentName}</b>
+                    <small>${pInfo}</small>
+                    <b style="color:var(--success)">${formatMoney(d.amount)} đ</b>
+                    ${d.id === highId ? '<small style="color:red; font-weight:bold">ĐÃ CÓ TRONG DANH SÁCH</small>' : ''}
+                </div>
+                <button style="color:red;border:1px solid red;background:none;padding:5px;border-radius:4px" onclick="deleteDonation(${d.id})">Xóa</button>
+            </div>`;
+        }).join('');
+        
+        document.getElementById('recentDonations').innerHTML = html;
+        document.getElementById('sumCount').innerText = list.length;
+        document.getElementById('sumMoney').innerText = formatMoney(totalMoney) + " đ";
+    }
+
+    function deleteDonation(id) {
+        if(confirm("Xóa mục này?")) {
+            donations = donations.filter(d => d.id !== id);
+            localStorage.setItem('donations', JSON.stringify(donations));
+            renderRecentDonations();
+        }
+    }
+
+    // --- CHI TIÊU ---
+    function prepareExpenseTab() {
+        let sel = document.getElementById('expenseCampaignSelect');
+        sel.innerHTML = campaigns.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        if(campaigns.length) sel.value = campaigns[campaigns.length-1].id;
+        renderExpenses();
+    }
+    function addExpense() {
+        let campId = document.getElementById('expenseCampaignSelect').value;
+        let date = document.getElementById('expDate').value;
+        let title = document.getElementById('expTitle').value.trim();
+        let amt = getRawMoney(document.getElementById('expAmount').value);
+        if(!campId) return alert("Vui lòng chọn đợt ủng hộ.");
+        if(!title || amt <= 0) return alert("Vui lòng nhập khoản chi và số tiền!");
+        expenses.push({ id: Date.now(), campaignId: campId, date, title, amount: amt });
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+        document.getElementById('expTitle').value = '';
+        document.getElementById('expAmount').value = '';
+        renderExpenses();
+    }
+    function renderExpenses() {
+        let campId = document.getElementById('expenseCampaignSelect').value;
+        if(!campId) return;
+        let curDons = donations.filter(d => d.campaignId == campId);
+        let curExps = expenses.filter(e => e.campaignId == campId);
+        let totalIn = curDons.reduce((sum, d) => sum + d.amount, 0);
+        let totalOut = curExps.reduce((sum, e) => sum + e.amount, 0);
+        document.getElementById('expenseListDisplay').innerHTML = curExps.slice().reverse().map(e => `
+            <div class="list-item">
+                <div class="info"><b>${e.title}</b><small>${e.date || ''}</small><b style="color:var(--danger)">- ${formatMoney(e.amount)} đ</b></div>
+                <button style="color:red;border:1px solid red;background:none;padding:5px;border-radius:4px" onclick="deleteExpense(${e.id})">Xóa</button>
+            </div>`).join('');
+        document.getElementById('sumExpense').innerText = formatMoney(totalOut) + " đ";
+        document.getElementById('finalBalance').innerText = formatMoney(totalIn - totalOut) + " đ";
+    }
+    function deleteExpense(id) {
+        if(confirm("Xóa khoản chi này?")) {
+            expenses = expenses.filter(e => e.id !== id);
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            renderExpenses();
+        }
+    }
+
+    // --- BẢN IN & XUẤT ẢNH ---
+    function preparePrintTab() {
+        let sel = document.getElementById('printCampaignSelect');
+        sel.innerHTML = campaigns.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        if(campaigns.length) sel.value = campaigns[campaigns.length-1].id;
+        renderPrintPreview();
+    }
+    function renderPrintPreview() {
+        let cid = document.getElementById('printCampaignSelect').value;
+        let type = document.getElementById('printTypeSelect').value;
+        if(!cid) return;
+        let camp = campaigns.find(c => c.id == cid);
+        let html = '';
+        let total = 0;
+
+        if(type === 'donate') {
+            let list = donations.filter(d => d.campaignId == cid).sort((a,b) => a.id - b.id);
+            let rows = list.map((d, i) => {
+                total += d.amount;
+                return `<tr><td style="text-align:center">${i+1}</td><td>PH bạn</td><td>${d.studentName}</td><td style="text-align:right">${formatMoney(d.amount)}</td></tr>`;
+            }).join('');
+            html = `
+                <div class="header-preview">DANH SÁCH ỦNG HỘ ${camp.name}</div>
+                <table class="print-table-preview">
+                    <thead><tr><th>STT</th><th>Vai trò</th><th>Họ và tên</th><th>Số tiền</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4" style="text-align:center">Chưa có dữ liệu</td></tr>'}</tbody>
+                    <tfoot><tr><th colspan="3" style="text-align:right">Tổng cộng:</th><th style="text-align:right">${formatMoney(total)}</th></tr></tfoot>
+                </table>`;
+        } else {
+            let list = expenses.filter(e => e.campaignId == cid).sort((a,b) => a.id - b.id);
+            let rows = list.map((e, i) => {
+                total += e.amount;
+                return `<tr><td style="text-align:center">${i+1}</td><td>${e.date||''}</td><td>${e.title}</td><td style="text-align:right">${formatMoney(e.amount)}</td></tr>`;
+            }).join('');
+            html = `
+                <div class="header-preview">DANH SÁCH CHI TIÊU ${camp.name}</div>
+                <table class="print-table-preview">
+                    <thead><tr><th>STT</th><th>Ngày</th><th>Nội dung chi</th><th>Số tiền</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4" style="text-align:center">Chưa có dữ liệu chi</td></tr>'}</tbody>
+                    <tfoot><tr><th colspan="3" style="text-align:right">Tổng chi:</th><th style="text-align:right">${formatMoney(total)}</th></tr></tfoot>
+                </table>`;
+        }
+        document.getElementById('printContent').innerHTML = html;
+    }
+
+    function printData() {
+        const win = window.open('', '', 'height=700,width=900');
+        win.document.write('<html><head><title>In</title>');
+        win.document.write('<style>body{margin:20px;font-family:"Times New Roman",serif}table{width:100%;border-collapse:collapse;font-size:13pt}th,td{border:1px solid #000;padding:6px}.header{text-align:center;font-weight:bold;font-size:16pt;margin-bottom:15px;text-transform:uppercase}</style>');
+        win.document.write('</head><body>');
+        win.document.write(document.getElementById('printContent').innerHTML);
+        win.document.write('</body></html>');
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); win.close(); }, 500);
+    }
+
+    function downloadImage() {
+        const element = document.getElementById('printContent');
+        html2canvas(element, { scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'danh_sach_' + Date.now() + '.jpg';
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        });
+    }
+
+    function backupData() {
+        let data = JSON.stringify({ students, campaigns, donations, expenses });
+        let blob = new Blob([data], {type: "text/plain"});
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "saoluu_quy_lop_" + new Date().toLocaleDateString() + ".txt";
+        a.click();
+    }
+    function restoreData() {
+        let file = document.getElementById('fileInput').files[0];
+        if(!file) return alert("Chọn file .txt hoặc .json");
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let data = JSON.parse(e.target.result);
+                if(confirm("Dữ liệu cũ sẽ bị thay thế. Tiếp tục?")) {
+                    localStorage.setItem('students', JSON.stringify(data.students || []));
+                    localStorage.setItem('campaigns', JSON.stringify(data.campaigns || []));
+                    localStorage.setItem('donations', JSON.stringify(data.donations || []));
+                    localStorage.setItem('expenses', JSON.stringify(data.expenses || []));
+                    location.reload();
+                }
+            } catch(e) { alert("File không đúng định dạng!"); }
+        };
+        reader.readAsText(file);
+    }
+</script>
+</body>
+</html>
