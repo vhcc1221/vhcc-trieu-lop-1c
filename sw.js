@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quy-lop-1c-v1';
+const CACHE_NAME = 'quy-lop-1c-v2';
 // Danh sách các file cần lưu để chạy offline
 const urlsToCache = [
   './',
