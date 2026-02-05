@@ -141,6 +141,7 @@
         <select id="printTypeSelect" onchange="renderPrintPreview()">
             <option value="donate">Danh sách Thu (Ủng hộ)</option>
             <option value="expense">Danh sách Chi tiêu</option>
+			<option value="not_donated">Danh sách CHƯA Ủng hộ</option>
         </select>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <button class="btn" onclick="printData()" style="background:#333">🖨️ IN / XUẤT PDF</button>
@@ -426,19 +427,57 @@
         let total = 0;
 
         if(type === 'donate') {
+            // --- DANH SÁCH ĐÃ ỦNG HỘ ---
             let list = donations.filter(d => d.campaignId == cid).sort((a,b) => a.id - b.id);
             let rows = list.map((d, i) => {
                 total += d.amount;
-                return `<tr><td style="text-align:center">${i+1}</td><td>PH bạn</td><td>${d.studentName}</td><td style="text-align:right">${formatMoney(d.amount)}</td></tr>`;
+                // Kiểm tra xem tên này có trong danh sách lớp không
+                let isStudent = students.some(s => s.name === d.studentName);
+                let roleText = isStudent ? "PH bạn" : ""; // Nếu có thì ghi PH bạn, không thì để trống
+
+                return `<tr>
+                    <td style="text-align:center">${i+1}</td>
+                    <td style="text-align:center">${roleText}</td>
+                    <td>${d.studentName}</td>
+                    <td style="text-align:right">${formatMoney(d.amount)}</td>
+                </tr>`;
             }).join('');
+            
             html = `
                 <div class="header-preview">DANH SÁCH ỦNG HỘ ${camp.name}</div>
                 <table class="print-table-preview">
-                    <thead><tr><th>STT</th><th>Vai trò</th><th>Họ và tên</th><th>Số tiền</th></tr></thead>
+                    <thead><tr><th style="width:50px">STT</th><th style="width:100px">Vai trò</th><th>Họ và tên</th><th style="width:120px">Số tiền</th></tr></thead>
                     <tbody>${rows || '<tr><td colspan="4" style="text-align:center">Chưa có dữ liệu</td></tr>'}</tbody>
                     <tfoot><tr><th colspan="3" style="text-align:right">Tổng cộng:</th><th style="text-align:right">${formatMoney(total)}</th></tr></tfoot>
                 </table>`;
+
+        } else if (type === 'not_donated') {
+            // --- DANH SÁCH CHƯA ỦNG HỘ (MỚI) ---
+            // 1. Lấy danh sách tên những người đã đóng trong đợt này
+            let donatedNames = donations.filter(d => d.campaignId == cid).map(d => d.studentName);
+            
+            // 2. Lọc danh sách học sinh gốc, giữ lại những em KHÔNG có tên trong danh sách đã đóng
+            let notDonatedList = students.filter(s => !donatedNames.includes(s.name));
+
+            let rows = notDonatedList.map((s, i) => {
+                return `<tr>
+                    <td style="text-align:center">${i+1}</td>
+                    <td>${s.name}</td>
+                    <td>${s.father || ''}</td>
+                    <td>${s.mother || ''}</td>
+                </tr>`;
+            }).join('');
+
+            html = `
+                <div class="header-preview">DANH SÁCH CHƯA ỦNG HỘ - ${camp.name}</div>
+                <p style="text-align:center; font-style:italic">Tổng số: ${notDonatedList.length} học sinh</p>
+                <table class="print-table-preview">
+                    <thead><tr><th style="width:50px">STT</th><th>Họ và tên</th><th>Họ tên Bố</th><th>Họ tên Mẹ</th></tr></thead>
+                    <tbody>${rows || '<tr><td colspan="4" style="text-align:center">Tất cả học sinh đều đã ủng hộ!</td></tr>'}</tbody>
+                </table>`;
+
         } else {
+            // --- DANH SÁCH CHI TIÊU ---
             let list = expenses.filter(e => e.campaignId == cid).sort((a,b) => a.id - b.id);
             let rows = list.map((e, i) => {
                 total += e.amount;
@@ -447,7 +486,7 @@
             html = `
                 <div class="header-preview">DANH SÁCH CHI TIÊU ${camp.name}</div>
                 <table class="print-table-preview">
-                    <thead><tr><th>STT</th><th>Ngày</th><th>Nội dung chi</th><th>Số tiền</th></tr></thead>
+                    <thead><tr><th style="width:50px">STT</th><th style="width:100px">Ngày</th><th>Nội dung chi</th><th style="width:120px">Số tiền</th></tr></thead>
                     <tbody>${rows || '<tr><td colspan="4" style="text-align:center">Chưa có dữ liệu chi</td></tr>'}</tbody>
                     <tfoot><tr><th colspan="3" style="text-align:right">Tổng chi:</th><th style="text-align:right">${formatMoney(total)}</th></tr></tfoot>
                 </table>`;
@@ -526,5 +565,6 @@
 </body>
 
 </html>
+
 
 
